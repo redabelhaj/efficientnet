@@ -1,0 +1,2 @@
+def essai():
+    print('OK')
