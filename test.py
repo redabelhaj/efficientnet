@@ -1,2 +1,0 @@
-def essai():
-    print('OK')
