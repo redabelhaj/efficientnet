@@ -1,11 +1,12 @@
-from get_data import get_loader_from_data
+from get_data import get_loader
 import tqdm
 import torch
 import numpy as np
+import torch.nn.functional as F
 
 def accuracy(net,testset,batch_size = 64,cuda=True):
     r=net.resolution
-    testloader = get_loader_from_data(testset, r, batch_size)
+    testloader = get_loader(testset, batch_size)
     net.eval()
     correct = 0
     total = 0
@@ -15,6 +16,8 @@ def accuracy(net,testset,batch_size = 64,cuda=True):
             if cuda:
                 images = images.to('cuda')
                 labels = labels.to('cuda')
+            ## dans tous les cas ici il faut changer la resol de l'image 
+            images = F.interpolate(images, r)
             outputs = net(images)
             _, predicted = np.max(outputs.data, 1)
             total += labels.size(0)
@@ -27,21 +30,21 @@ def accuracy(net,testset,batch_size = 64,cuda=True):
 
 
 
-def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n_epoch = 5, cuda=True, disp_stats = True):
+def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n_epoch = 5, cuda=True, disp_stats = True, validate = True):
     total_nb_ex = len(trainset)
     train_idx = int((1-val_split)*total_nb_ex)
 
     trainset = trainset[:train_idx]
-    valset = trainset[train_idx:]
+    if validate :
+        valset = trainset[train_idx:]
+        valloader = get_loader(valset, batch_size)
+
 
     resol_cible = model.resolution
-    trainloader = get_loader_from_data(trainset, resol_cible, batch_size = batch_size)
-
-    valloader = get_loader_from_data(valset, resol_cible, batch_size=batch_size)
-
+    trainloader = get_loader(trainset, batch_size)
 
     loss_train, loss_val = [], []
-    #acc_train, acc_val = [],[] ## fct accuracy non encore codée
+    acc_train, acc_val = [],[]
 
     loss_func = loss_fn()
     
@@ -52,7 +55,10 @@ def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n
             if cuda:
                 inputs = inputs.to('cuda') 
                 labels = labels.to('cuda')
+
+            # on change la resol de l'image    
             optimizer.zero_grad()
+            inputs = F.interpolate(inputs, resol_cible)
             outputs = model(inputs)
             loss = loss_func(outputs, labels)
             loss.backward()
@@ -61,24 +67,31 @@ def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n
     
         # maintenant plus qu'a calculer les stats et les afficher
         loss_train.append(running_trainloss)
-        #acc_train = ## il faut la fonction accuracy
+        acct = accuracy(model, trainset, batch_size=batch_size)
+        acc_train.append(acct)
 
-        vloss = 0
-        for data in valloader:
-            ipt, lbl = data
-            if cuda : 
-                ipt = ipt.to('cuda')
-                lbl = ipt.to('cuda')
-            out = model(ipt)
+        # stats de validation
+        if validate:
+            vloss = 0
+            for data in valloader:
+                ipt, lbl = data
+                if cuda : 
+                    ipt = ipt.to('cuda')
+                    lbl = ipt.to('cuda')
+                ipt = F.interpolate(ipt, resol_cible)
+                out = model(ipt)
+                vloss+= loss_func(out, lbl)
+            loss_val.append(vloss)
+            accv = accuracy(model, valset, batch_size)
+            print('Epoch', epoch, '/', n_epoch, ':')
+            print('train loss : ', running_trainloss)
+            print('val loss : ', vloss)
+            print('train acc',acct )
+            print('val acc' ,accv)
 
-            vloss+= loss_func(out, lbl)
-        loss_val.append(vloss)
-        print('Epoch', epoch, '/', n_epoch, ':')
-        print('train loss : ', running_trainloss)
-        print('val loss : ', vloss)
-        # print('train acc' ) etc....
-
-# a modifier s'il faut retourner les accuracys
-    return model, loss_train, loss_val
+    if validate:
+        return model, loss_train, loss_val, acc_train, acc_val
+    else:
+        return model, loss_train, acc_train
 
 
