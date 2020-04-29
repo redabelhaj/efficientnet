@@ -3,13 +3,13 @@ import torchvision.transforms as transforms
 import torch
 import numpy as np
 
-def get_data(resol_max,train_size, test_size,path, database = 'cifar10'):
+def get_data(resol_max,train_size, test_size,path, database = 'cifar10', download = True):
 
     transform = transforms.Compose([transforms.Resize(size=(resol_max, resol_max)), transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))])
     if database=='cifar10':
-        trainset = torchvision.datasets.CIFAR10(root= path, train=True, transform=transform, download=False)
-        testset = torchvision.datasets.CIFAR10(root = path, train=False,transform=transform, download=False)
+        trainset = torchvision.datasets.CIFAR10(root= path, train=True, transform=transform, download=download)
+        testset = torchvision.datasets.CIFAR10(root = path, train=False,transform=transform, download=download)
     else:
         raise NotImplementedError
     return trainset, testset
