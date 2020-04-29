@@ -1,10 +1,9 @@
-## A ecrire : 
-## classe ResNet  __init__(self, resolution, width, depth) => dans le forward, mettre un resize :)
-
 
 import torch
 import torch.nn as nn 
 import torch.nn.functional as F
+
+
 
 
 class ResNetBlock(nn.Module):
@@ -20,7 +19,8 @@ class ResNetBlock(nn.Module):
                                 nn.ReLU(), 
                                 nn.Conv2d(planes, planes,3, padding=1))
         
-        self.iden = nn.Conv2d(self.in_planes, self.planes, 2, stride = 2)
+        self.iden = nn.Conv2d(self.in_planes, self.planes, 3, stride = 2,
+                              padding =1)
 
       else:
         self.fx = nn.Sequential(nn.Conv2d(planes, planes, 3, padding = 1),
