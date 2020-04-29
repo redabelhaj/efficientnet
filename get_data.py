@@ -3,7 +3,7 @@ import torchvision.transforms as transforms
 import torch
 import numpy as np
 
-def get_dataset(resol_max,train_size, test_size,path, validation = False, database = 'cifar10', download = True):
+def get_dataset(resol_max,path, validation = False, database = 'cifar10', download = True):
 
     transform = transforms.Compose([transforms.Resize(size=(resol_max, resol_max)), transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))])

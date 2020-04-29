@@ -1,9 +1,8 @@
-from training import train
-from training import accuracy
-from resnetclass import get_resnet
 import numpy as np
 import torch
-
+from resnetclass import get_resnet
+from training import accuracy
+from training import train
 
 def gridsearch(trainset, testset,loss_fn,precision=.2,epsilon = .2,phi=1, bs=64,learning_rate=1e-2,n_epoch=2):
   solu=1,1,1
