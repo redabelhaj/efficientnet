@@ -1,6 +1,31 @@
 from get_data import get_loader_from_data
 import tqdm
 import torch
+import numpy as np
+
+def accuracy(net,testset,batch_size = 64,cuda=True):
+    r=net.resolution
+    testloader = get_loader_from_data(testset, r, batch_size)
+    net.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            if cuda:
+                images = images.to('cuda')
+                labels = labels.to('cuda')
+            outputs = net(images)
+            _, predicted = np.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+        print('Accuracy of the network on the test images: %d %%' % (100 * correct / total))
+        return 100.0 * correct/total
+
+
+
+
 
 def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n_epoch = 5, cuda=True, disp_stats = True):
     total_nb_ex = len(trainset)
@@ -55,4 +80,5 @@ def train(model, optimizer, trainset, loss_fn, batch_size=64, val_split = .10, n
 
 # a modifier s'il faut retourner les accuracys
     return model, loss_train, loss_val
+
 

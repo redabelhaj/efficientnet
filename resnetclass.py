@@ -8,43 +8,39 @@ import torch.nn.functional as F
 
 
 class ResNetBlock(nn.Module):
+  def __init__(self, in_planes, planes, stride=1):
+      super(ResNetBlock, self).__init__()
+      self.stride = stride
+      self.in_planes=in_planes
+      self.planes = planes
+      if stride!=1:
 
-    def __init__(self, in_planes, planes, stride=1):
-        super(ResNetBlock, self).__init__()
-        self.stride = stride
-        self.in_planes=in_planes
-        self.planes = planes
-        if stride!=1:
-
-          self.fx = nn.Sequential(nn.Conv2d(in_planes, planes, 3, stride=2, 
-                                            padding=1),
-                                  nn.ReLU(), 
-                                  nn.Conv2d(planes, planes,3, padding=1))
-          
-          self.iden = nn.Conv2d(self.in_planes, self.planes, 2, stride = 2)
-
-
-        else:
-          self.fx = nn.Sequential(nn.Conv2d(planes, planes, 3, padding = 1),
-                                  nn.ReLU(), 
-                                  nn.Conv2d(planes, planes,3, padding=1))
-          
-          self.iden = nn.Sequential()
-          
-
-
-    def forward(self, x):
-
-      if self.stride ==1:
-        fx = self.fx(x)
-        out = fx + self.iden(x)
-        return F.relu(out)
+        self.fx = nn.Sequential(nn.Conv2d(in_planes, planes, 3, stride=2, 
+                                          padding=1),
+                                nn.ReLU(), 
+                                nn.Conv2d(planes, planes,3, padding=1))
+        
+        self.iden = nn.Conv2d(self.in_planes, self.planes, 2, stride = 2)
 
       else:
+        self.fx = nn.Sequential(nn.Conv2d(planes, planes, 3, padding = 1),
+                                nn.ReLU(), 
+                                nn.Conv2d(planes, planes,3, padding=1))
+        self.iden = nn.Sequential()
+          
 
-        fx = self.fx(x)
-        out = fx + self.iden(x)
-        return F.relu(out)
+  def forward(self, x):
+
+    if self.stride ==1:
+      fx = self.fx(x)
+      out = fx + self.iden(x)
+      return F.relu(out)
+
+    else:
+
+      fx = self.fx(x)
+      out = fx + self.iden(x)
+      return F.relu(out)
 
 
 
@@ -102,3 +98,7 @@ class ResNet(nn.Module):
       out = out.view(out.size(0), -1)
       out = self.linear(out)
       return out
+
+def get_resnet(depth = [2,2,2,2],resolution = 224,width=16, num_classes=10,input_dim=3):
+  resnet = ResNet(depth,resolution,width,num_classes=10,input_dim=3)
+  return resnet
