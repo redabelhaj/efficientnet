@@ -39,4 +39,4 @@ def gridsearch(trainset, testset,loss_fn,precision=.2,epsilon = .5,bs=64,n_epoch
           if accu>accu_max:
             accu_max= accu
             solu=alpha,beta,gamma
-    return solu
+  return solu
