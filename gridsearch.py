@@ -16,12 +16,12 @@ def get_new_depth(alpha, depth):
   return new_depth
 
 
-def gridsearch(trainset, testset,loss_fn,precision=.2,epsilon = .5,phi=1, bs=64,learning_rate=1e-2,n_epoch=2):
+def gridsearch(trainset, testset,loss_fn,precision=.2,epsilon = .5,bs=64,n_epoch=2):
   solu=1,1,1
   depth, width, resol = [2,2,2,2], 16, 112  ## ce sont les valeurs de base à scaler ensuite
   # training
   model1 = get_resnet(depth, resol, width)
-  optimizer = torch.optim.Adam(model1.parameters(),lr=learning_rate)
+  optimizer = torch.optim.Adam(model1.parameters())
   model1, _, _ =train(model1, optimizer, trainset, loss_fn, batch_size=bs, n_epoch=n_epoch, disp_stats=False, validate=False)
   # testing
   accu_max=accuracy(model1, testset, batch_size=bs)
@@ -33,7 +33,7 @@ def gridsearch(trainset, testset,loss_fn,precision=.2,epsilon = .5,phi=1, bs=64,
           # il faut réentraîner le modele
           new_depth = get_new_depth(alpha, depth)
           model = get_resnet(depth = new_depth, width = int(beta*width), resolution = int(gamma*resol))
-          optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
+          optimizer = torch.optim.Adam(model.parameters())
           model, _, _ = train(model, optimizer, trainset, loss_fn, batch_size=bs, n_epoch=n_epoch, disp_stats=False, validate=False)
           accu = accuracy(model, testset, batch_size = bs)
           if accu>accu_max:

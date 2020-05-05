@@ -64,7 +64,7 @@ class ResNet(nn.Module):
         layer = self._make_layer(Block,plane ,nb,2)
         layers.append(layer)
         plane*=2
-        resol/=2
+        resol= roundsp(resol)
       
       self.layers = nn.Sequential(*layers)
       # arrivé ici on en est à plane@resol*resol
@@ -80,7 +80,7 @@ class ResNet(nn.Module):
       block1 = Block(planes, 2*planes, stride = 2)
       planes *=2
       layers.append(block1)
-      for i in range(1,num_blocks):
+      for _ in range(1,num_blocks):
         block_new = Block(planes, planes, stride =1)
         layers.append(block_new)
       return nn.Sequential(*layers)
@@ -102,3 +102,10 @@ class ResNet(nn.Module):
 def get_resnet(depth = [2,2,2,2],resolution = 224,width=16, num_classes=10,input_dim=3):
   resnet = ResNet(depth,resolution,width,num_classes=10,input_dim=3)
   return resnet
+
+
+def roundsp(r):
+  if r%2==0:
+    return r/2
+  else:
+    return (1+r)/2
