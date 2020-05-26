@@ -2,10 +2,31 @@ from get_data import get_loader
 import torch
 import numpy as np
 import torch.nn.functional as F
+from resnetclass import get_resnet
 
-def accuracy(net,testset,batch_size = 64,cuda=True):
+
+def interpolate(img, res):
+    if img.ndim ==4:
+        img_perm = F.interpolate(img, size = res)
+        img_perm = img_perm.permute(0,1,3,2)
+        img_perm = F.interpolate(img_perm, size =res)
+        img_perm = img_perm.permute(0,1,3,2)
+        return img_perm
+    elif img.ndim==3:
+        img_perm = F.interpolate(img, size = res)
+        img_perm = img_perm.permute(0,2,1)
+        img_perm = F.interpolate(img_perm, size =res)
+        img_perm = img_perm.permute(0,2,1)
+        return img_perm
+    else:
+        raise Exception("tensor dimension should be 3 or 4")
+
+
+
+def accuracy(net,testset,num_points = 9000,batch_size = 64,cuda=True):
     r=net.resolution
-    testloader = get_loader(testset, batch_size)
+    testloader = get_loader(testset, batch_size, num_points=num_points)
+    ## les images sont sous formes de dataloader de tenseurs d'une certaine taille
     net.eval()
     correct = 0
     total = 0
@@ -14,12 +35,12 @@ def accuracy(net,testset,batch_size = 64,cuda=True):
     with torch.no_grad():
         for data in testloader:
             images, labels = data
+            images2 = interpolate(images,r) 
             if cuda:
-                images = images.to('cuda')
+                images2= images2.to('cuda')
                 labels = labels.to('cuda')
             ## dans tous les cas ici il faut changer la resol de l'image 
-            images = F.interpolate(images, r)
-            outputs = net(images)
+            outputs = net(images2)
             _, predicted = torch.max(outputs.data, 1)
            
             total += labels.size(0)
@@ -30,69 +51,43 @@ def accuracy(net,testset,batch_size = 64,cuda=True):
 
 
 
-def train(model, optimizer, trainset, loss_fn, valset=None, batch_size=64,  n_epoch = 5, cuda=True, disp_stats = True, validate = False):
+def train(model, optimizer, trainset, loss_fn,num_points=5000, batch_size=220,  n_epoch = 40, cuda=True):
     if cuda:
         model.to('cuda')
-
-    if validate :
-        valloader = get_loader(valset, batch_size)
-
-
     resol_cible = model.resolution
-    trainloader = get_loader(trainset, batch_size)
-
-    loss_train, loss_val = [], []
-    acc_train, acc_val = [],[]
-
+    trainloader = get_loader(trainset, batch_size, num_points=num_points)
     loss_func = loss_fn()
-    
-    for epoch in range(n_epoch):
-        running_trainloss = 0
+    for _ in range(n_epoch):
         for data in trainloader:
             inputs, labels = data
+            inputs2 = interpolate(inputs, resol_cible)
             if cuda:
-                inputs = inputs.to('cuda') 
+                inputs2 = inputs2.to('cuda') 
                 labels = labels.to('cuda')
-
-            # on change la resol de l'image    
             optimizer.zero_grad()
-            inputs = F.interpolate(inputs, resol_cible)
-            outputs = model(inputs)
+            outputs = model(inputs2)
             loss = loss_func(outputs, labels)
             loss.backward()
-            running_trainloss+= loss
             optimizer.step()
-    
-        # maintenant plus qu'a calculer les stats et les afficher
-        loss_train.append(running_trainloss)
-        acct = accuracy(model, trainset, batch_size=batch_size)
-        acc_train.append(acct)
-        if disp_stats:
-            print('Epoch', epoch, '/', n_epoch, ':')
-            print('train loss : ', running_trainloss)
-            print('train acc',acct )
+    return model
 
-        # stats de validation
-        if validate:
-            vloss = 0
-            for data in valloader:
-                ipt, lbl = data
-                if cuda : 
-                    ipt = ipt.to('cuda')
-                    lbl = ipt.to('cuda')
-                ipt = F.interpolate(ipt, resol_cible)
-                out = model(ipt)
-                vloss+= loss_func(out, lbl)
-            loss_val.append(vloss)
-            accv = accuracy(model, valset, batch_size)
-            acc_val.append(accv)
-            if disp_stats:
-                print('val loss : ', vloss)
-                print('val acc' ,accv)
 
-    if validate:
-        raise NotImplementedError
-    else:
-        return model, loss_train, acc_train
+def train_acc_once(trainset, testset,num_points=5000, batch_size=220,width=16,resolution = 110, depth = [2,2,2,2],n_epoch=30, cuda=True):
+    model = get_resnet(depth = depth, resolution=resolution, width=width)
+    optimizer = torch.optim.Adam(model.parameters())
+    loss_fn = torch.nn.CrossEntropyLoss
+    model = train(model, optimizer, trainset, loss_fn, num_points=num_points, batch_size=batch_size, n_epoch=n_epoch, cuda=cuda)
+    acc = accuracy(model, testset, batch_size=batch_size)
+    del model
+    return acc
+
+def train_acc_crossval(trainset, testset,num_points=5000, batch_size=220,width=16,resolution = 110, depth = [2,2,2,2],n_epoch=30, cuda=True,k=30):
+    accu_tot = 0
+    for _ in range(k):
+        acc = train_acc_once(trainset, testset, num_points=num_points, batch_size=batch_size, width=width, resolution=resolution, depth = depth, n_epoch=n_epoch, cuda = cuda)
+        accu_tot+=acc
+    return accu_tot/k
+
+
 
 
