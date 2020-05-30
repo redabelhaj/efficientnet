@@ -3,6 +3,7 @@ import torch
 from resnetclass import get_resnet
 from training import train_acc_crossval
 
+
 def get_new_depth(alpha, depth):
     sd = sum(depth)
     i=0
@@ -12,25 +13,21 @@ def get_new_depth(alpha, depth):
         i+=1
     return new_depth
 
-def gridsearch(trainset, testset,loss_fn,num_points = 4000, precision=.2,epsilon = .5,bs=64,n_epoch=30, k=30):
-  solu=1,1,1
-  depth, width, resol = [2,2,2,2], 16, 112  ## ce sont les valeurs de base à scaler ensuite
-  # training
-  accu_max= train_acc_crossval(trainset, testset, num_points=num_points, batch_size=bs, width = width, resolution=resol, depth = [2,2,2,2],
-  n_epoch=n_epoch, k=k)
+def get_list_gs(precision=.12, epsilon=0.12, max_flops=2):
+    return [(round(a,2),round(b,2),round(g,2)) for a in np.arange(1.13,2,precision) for b in np.arange(1.09,2,precision)
+            for g in np.arange(1.05,2,precision) if np.abs(a*(b**2)*(g**2) - max_flops)< epsilon ]
 
-  for alpha in np.arange(1,2,precision):
-    for beta in np.arange(1,2,precision):
-      for gamma in np.arange(1,2,precision):
-        if np.abs(alpha*beta**2*gamma**2 - 2)<=epsilon:
-          # il faut réentraîner le modele
-          new_depth = get_new_depth(alpha, depth)
-          new_width = int(beta*width)
-          new_resol = int(gamma*resol)
-          accu = train_acc_crossval(trainset, testset, num_points=num_points, batch_size=bs, width = new_width, 
-          resolution=new_resol, depth = new_depth, n_epoch=n_epoch, k=k)
-          
-          if accu>accu_max:
-            accu_max= accu
-            solu=alpha,beta,gamma
-  return solu
+def grid_search(list_abg, max_ref,trainset, testset,disp=False):
+    solu =1,1,1
+    best = max_ref
+    for a,b,g in list_abg:
+        res=int(95*g)
+        w=int(12*b)
+        d=get_new_depth(a,[2,2,2,2])
+        accu = train_acc_crossval(trainset, testset,num_points=7000, batch_size=220,
+                           width=w,resolution = res, depth = d,n_epoch=40,k=8,disp=disp)
+        print('params',a,b,g,' acc : ',accu)
+        if accu>best:
+            solu = a,b,g
+            best = accu
+    return solu
