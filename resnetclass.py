@@ -27,7 +27,7 @@ class ResNetBlock(nn.Module):
                                   nn.BatchNorm2d(planes),
                                   nn.ReLU(), 
                                   nn.Conv2d(planes, planes,3, padding=1),
-                                  nn.BatchNorm2d(planes)),
+                                  nn.BatchNorm2d(planes))
           
           self.iden = nn.Conv2d(self.in_planes, self.planes, 3, stride = 2,
                                 padding =1)
@@ -44,14 +44,18 @@ class ResNetBlock(nn.Module):
                                   nn.ReLU(), 
                                   nn.Conv2d(planes, planes,3, padding=1),
                                   nn.BatchNorm2d(planes))
+        
           self.iden = nn.Sequential()
 
           
 
   def forward(self, x):
 
+
     if self.stride ==1:
       fx = self.fx(x)
+    
+      
       out = fx + self.iden(x)
       return F.relu(out)
 
@@ -119,9 +123,9 @@ class ResNet(nn.Module):
       return out
 
 def get_resnet(depth = [2,2,2,2],resolution = 224,width=16, num_classes=10,input_dim=3):
-  resnet = ResNet(depth,resolution,width,num_classes=10,input_dim=3)
-  return resnet
+  resnet = ResNet(depth, resolution, width=width)
 
+  return resnet
 
 def roundsp(r):
   if r%2==0:
