@@ -1,9 +1,10 @@
-# INTRODUCTION
+## INTRODUCTION
 
 This project was an academic project at Ecole Polytechnique made under the supervision of Maks Ovsjanikov, by Reda Belhaj-Soullami and Mohamed Amine Rabhi.
+For further information, the project report is available in the report folder
 
 
-# PROJECT OUTLINE
+## PROJECT OUTLINE
 
 In this project, we investigate a compound scaling method for deep convolutional
 neural networks called EfficientNet. To demonstrate the relevance of compound
